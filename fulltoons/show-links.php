@@ -7,6 +7,9 @@ $deadstream = "https://animedisk.me/";
 $animeworld = "https://animeworld-india.me/";
 $deadtoons = "https://deadtoons.org/";
 $archive = "https://archive.deadtoons.org";
+$shortnerDomain = "https://archive.deadtoons.org/redirect?url=";
+$deaddriveDomain = "https://new2.deaddrive.shop";
+
 $animeDisk = "https://animedisk.me";
 
 $anime_id = $_GET['animeId'];
@@ -37,6 +40,8 @@ class MakeResponse
 
         global $archive;
         global $animeDisk;
+        global $deaddriveDomain;
+        global $shortnerDomain;
         $previousEpisodeNum = null;
         $skippedEpisodes = [];
 
@@ -134,9 +139,8 @@ class MakeResponse
                 $endEp = str_pad($endEp, 2, '0', STR_PAD_LEFT);
                 echo "<strong><center> EP{$startEp} - EP{$endEp}</center></strong><hr>";
                 foreach ($packs as $pack_row) {
-                    $deaddrive_packLink = "https://deaddrive.shop/file/{$pack_row['uid']}";
-                    $url = "https://archive.deadtoons.one/redirect?url=";
-                    $url = $url . "zylith" . AES("encrypt", $deaddrive_packLink);
+                    $deaddrive_packLink = "$deaddriveDomain/file/{$pack_row['uid']}";
+                    $url = $shortnerDomain . "zylith" . AES("encrypt", $deaddrive_packLink);
                     echo "<strong><center><a rel='nofollow' href={$url} target='_blank'>{$pack_row['anime_name']} S" . str_pad($pack_row['my_season_num'], 2, '0', STR_PAD_LEFT) . " {$pack_row['quality']} - [" . formatSize($pack_row['size']) . "]</a></center></strong><hr>";
                 }
             }
