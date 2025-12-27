@@ -99,16 +99,6 @@ try {
 
         if (isset($_GET['limit']) && $_GET['limit'] == 1) {
             $links = [];
-
-            // PlayerX
-            $stmt = $pdo->prepare("SELECT * FROM deadstream_playerx WHERE playerx != 'error' AND status = 1 AND is_episode = 1 AND cor_id = ? LIMIT 1");
-            $stmt->execute([$episodeId]);
-            $links['playerx'] = $stmt->fetch();
-
-            if (!empty($links['playerx'])) {
-                $links['playerx']['playerx'] = "https://boosterx.stream/v/{$links['playerx']['playerx']}/";
-            }
-
             // DeadDrive
             $stmt = $pdo->prepare("SELECT * FROM EpisodeLinks JOIN Links_info ON EpisodeLinks.drive_id = Links_info.Id WHERE episode_id = ? ORDER BY EpisodeLinks.quality_order DESC LIMIT 1");
             $stmt->execute([$episodeId]);
