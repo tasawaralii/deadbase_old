@@ -36,6 +36,7 @@ class MakeResponse
     {
 
         global $archive;
+        global $animeDisk;
         $previousEpisodeNum = null;
         $skippedEpisodes = [];
 
@@ -63,6 +64,9 @@ class MakeResponse
 
         echo '<center><h4><strong style="color:red;">[Season ' . $res[0]['my_season_num'] . ']</strong></h4></center><hr>';
         echo img($res[0]['my_season_id'], $pdo);
+
+        echo "<h4><center>Watch Online at <a rel='nofollow' href='$animeDisk'>AnimeDisk</a></center></h4><hr>";
+
 
         foreach ($res as $row) {
 
@@ -99,7 +103,6 @@ class MakeResponse
             }
             echo "</center><hr>";
         }
-
 
         $psql = $pdo->query("
                 SELECT 
