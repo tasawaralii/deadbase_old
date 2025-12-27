@@ -1,0 +1,221 @@
+<?php
+require_once('Functions.php');
+require_once('db.php');
+$resultsPerPage = 30;
+
+
+$currentPage = isset($_GET['page']) ? $_GET['page'] : 1;
+$offset = ($currentPage - 1) * $resultsPerPage;
+
+$searchTerm = isset($_GET['search']) ? $_GET['search'] : '';
+$searchTerm = $searchTerm ? "WHERE Name LIKE '%$searchTerm%'" : "";
+$sort = isset($_GET['sort']) ? $_GET['sort'] : "new_date";
+
+
+
+
+    $res = $pdo->query("SELECT * FROM Links_info $searchTerm ORDER BY $sort DESC LIMIT $resultsPerPage OFFSET $offset")->fetchAll(PDO::FETCH_ASSOC);
+    
+    $totalResults = $pdo->query("SELECT COUNT(*) AS total FROM Links_info $searchTerm")->fetchColumn();
+
+?>
+
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <meta http-equiv="CONTENT-TYPE" content="text/html; charset=UTF-8">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Deadtoons FileManager!</title>
+    <script>
+function confirmDelete(id) {
+    Swal.fire({
+        title: 'Are you sure?',
+        text: 'You won\'t be able to revert this!',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Yes, delete it!'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // User confirmed, proceed with AJAX deletion
+            deleteRecord(id);
+        }
+    });
+}
+
+function deleteRecord(id) {
+  var url = `/operations/delete.php?id=${id}`;
+  fetch(url)
+    .then(response => response.text())
+    .then(data => {
+      if(data === "success") {
+        Swal.fire({
+          title: 'Deleted!',
+          text: data, // Use 'data' instead of 'response'
+          icon: 'success',
+          showConfirmButton: false,
+          timer: 1500,
+        });
+        $(`tr[data-id="${id}"]`).remove();
+      }
+    })
+    .catch(error => {
+      Swal.fire('Error!', 'An error occurred during the deletion.', 'error');
+    });
+}
+
+        function edit(id, currentName) {
+            var editedName = prompt("Edit Name:", currentName);
+            if (editedName && editedName !== currentName && editedName !== "") {
+                var form = document.createElement('form');
+                form.method = 'POST';
+                form.action = 'edit.php';
+
+                var inputId = document.createElement('input');
+                inputId.type = 'hidden';
+                inputId.name = 'id';
+                inputId.value = id;
+
+                var inputName = document.createElement('input');
+                inputName.type = 'hidden';
+                inputName.name = 'editedName';
+                inputName.value = editedName;
+
+                form.appendChild(inputId);
+                form.appendChild(inputName);
+
+                document.body.appendChild(form);
+                form.submit();
+            }
+        }
+        
+    </script>
+</head>
+
+<body class="bg-dark">
+    <div class="container mt-5">
+                <form>
+
+    <div class="input-group search-bar mb-5">
+            <input type="text" class="form-control" name="search" placeholder="Search by Name" id="searchTerm">
+            <div class="input-group-append">
+                <button class="btn btn-success" type="submit">Search</button>
+            </div>
+        </div>
+        </form>
+        <div class="card">
+            <div class="card-header bg-dark">
+                <h4 class="display-6 text-center text-white">Manager For Deadtoons</h4>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered text-center">
+                        <thead class="bg-dark text-white">
+                            <tr>
+                                <th>Name</th>
+                                <th><a href="/filemanager?sort=views">Views</a></th>
+                                <th><a href="/filemanager?sort=downloads">Downloads</a></th>
+                                <th>Size</th>
+                                <th><a href="/filemanager">Date</a></th>
+                                <th>Embed</th>
+                                <th>link_id</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php
+                            foreach($res as $row) {
+                            ?>
+                                <tr data-id="<?php echo $row['Id']; ?>" data-date="<?php echo $row['new_date']; ?>">
+                                    <td><a href="https://deaddrive.xyz/file/<?php echo $row['uid']; ?>" target="_blank"><?php echo $row['Name']; ?></a></td>
+
+                                    <td><?php echo $row['views']; ?></td>
+                                    <td><?php echo $row['downloads']; ?></td>
+                                    <td><?php echo formatSize($row['size']); ?></td>
+                                    <td><?php echo $row['new_date']; ?></td>
+                                    <td><a href="https://deaddrive.xyz/embed/<?= $row['uid'] ?>" target="_blank" class="btn btn-primary">Embed</button></td>
+                                    <td><?= $row['link_id'] ?></td>
+
+
+                                </tr>
+                            <?php
+                            }
+                            ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+<?php
+
+echo pagination($totalResults, $currentPage, $resultsPerPage, "", (isset($_GET['search']) ? "&search=".$_GET['search'] : ''), '');
+for ($i = 1; $i <= $totalPages; $i++) {
+    $activeClass = ($i == $currentPage) ? 'active' : '';
+    $searchParam = ($searchTerm !== '') ? '&search=' . urlencode($searchTerm) : '';
+    echo '<a class="btn btn-success mr-1 mb-1 ' . $activeClass . '" href="?page=' . $i . $searchParam . '">' . $i . '</a>';
+}
+
+
+function pagination($total, $pgno, $limit, $domain, $s, $cat)
+{   
+        if(!$total == 0) {
+    $output = '<div class="pagination justify-content-center mt-5 mb-5" style="display: flex; flex-wrap: wrap;">';
+
+    if($pgno > 1) {
+        $output.= '<a class="btn btn-info mr-1 mb-1" href="'.$domain.$cat.'?page='.($pgno-1).$s.'">Previous</a>';
+    }
+        $pages = $total % $limit == 0 ? $total / $limit : ($total / $limit) + 1 ;
+        $pages = intval($pages);
+    // if pages exists after loop's lower limit
+    if ($pages > 1) {
+        if (($pgno - 3) > 0) {
+            $output = $output . '<a href="'.$domain.$cat.'?page=1'.$s.'" class="btn btn-success mr-1 mb-1 '.(($pgno == 1) ? "active" : '').'">1</a>';
+        }
+        if (($pgno - 3) > 1) {
+            $output = $output . '<span class="btn btn-success mr-1 mb-1">&hellip;</span>';
+        }
+
+        // Loop for provides links for 2 pages before and after current page
+        for ($i = ($pgno - 2); $i <= ($pgno + 2); $i ++) {
+            if ($i < 1)
+                continue;
+            if ($i > $pages)
+                break;
+            if ($pgno == $i)
+                $output = $output . '<span class="btn btn-danger mr-1 mb-1">'.$i.'</span>';
+            else
+                $output = $output . '<a class="btn btn-success mr-1 mb-1" href="'.$domain.$cat.'?page='.$i.$s.'">'.$i.'</a>';
+        }
+
+        // if pages exists after loop's upper limit
+        if (($pages - ($pgno + 2)) > 1) {
+            $output = $output . '<span class="btn btn-success mr-1 mb-1">&hellip;</span>';
+        }
+        if (($pages - ($pgno + 2)) > 0) {
+            if ($pgno == $pages)
+                $output = $output . '<span class="btn btn-success mr-1 mb-1">'.$pages.'</span>';
+            else
+                $output = $output . '<a class="btn btn-success mr-1 mb-1" href="'.$domain.$cat.'?page='.$pages.$s.'">'.$pages.'</a>';
+        }
+    }
+    if($pgno != $pages)
+    $output.= '<a class="btn btn-info mr-1 mb-1" href="'.$domain.$cat.'?page='.($pgno+1).$s.'">Next</a>';
+    $output.= '</div>';
+    return $output;
+        }
+        return;
+}
+
+
+
+?>
+
+    
+</body>
+
+</html>
