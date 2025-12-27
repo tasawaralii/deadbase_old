@@ -12,82 +12,28 @@ $res = [];
 
 try {
 
-    // --- New DeadDrive Link ---
-    if (isset($_GET['new'])) {
-        $episode_id = intval($_GET['episodeid']);
+    $anime_id = $_GET['animeid'];
+    $season_id = $_GET['seasonid'];
+    $episode_id = $_GET['episodeid'];
 
-        $sql = "SELECT uid FROM Links_info WHERE Id = (
-                    SELECT drive_id FROM EpisodeLinks 
-                    WHERE episode_id = ? AND isStream = 1 LIMIT 1
-                )";
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute([$episode_id]);
-        $uid = $stmt->fetchColumn();
+    $sql = "
+        SELECT e.*, awp.player_link
+        FROM Episodes e
+        JOIN my_seasons s ON s.my_season_id = e.my_season_id
+        JOIN Animes a ON a.anime_id = s.anime_id
+        LEFT JOIN animeworld_player awp ON awp.episode_id = e.episode_id
+        WHERE e.episode_id = ?
+            AND s.my_season_id = ?
+            AND a.anime_id = ?
+    ";
 
-        if (!$uid) {
-            echo json_encode(['error' => 'No UID found']);
-            exit;
-        }
-
-        if (isset($_GET['type']) && $_GET['type'] === "secure") {
-            echo json_encode([[
-                'server_name' => "DeadDrive",
-                'link' => "https://deaddrive.icu/embed/$uid"
-            ]]);
-            exit;
-        }
-
-        echo fetch("https://api.deaddrive.icu/get-links?uid=$uid");
-        exit;
-    }
-
-    // --- Fetch by animeid, season, and episode number ---
-    if (isset($_GET['animeid'], $_GET['season'], $_GET['episode'])) {
-        $anime_id = intval($_GET['animeid']);
-        $season = intval($_GET['season']);
-        $episode = intval($_GET['episode']);
-
-        $sql = "SELECT Episodes.* 
-                FROM Episodes 
-                JOIN my_seasons ON my_seasons.my_season_id = Episodes.my_season_id 
-                JOIN Animes ON Animes.anime_id = my_seasons.anime_id
-                WHERE Animes.anime_id = ? AND my_seasons.my_season_num = ? AND Episodes.epSort = ?";
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute([$anime_id, $season, $episode]);
-        $res = $stmt->fetchAll();
-    }
-
-    // --- Fetch by episode ID (optional season ID) ---
-    elseif (isset($_GET['epid'])) {
-        $episodeId = intval($_GET['epid']);
-        $params = [$episodeId];
-        $sql = "SELECT * FROM Episodes WHERE ";
-
-        if (isset($_GET['seasonid'])) {
-            $seasonId = intval($_GET['seasonid']);
-            $sql .= "my_season_id = ? AND ";
-            array_unshift($params, $seasonId);
-        }
-
-        $sql .= "episode_id = ?";
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute($params);
-        $res = $stmt->fetchAll();
-    }
-
-    // --- Fetch by seasonid and episode number ---
-    elseif (isset($_GET['seasonid'], $_GET['episode'])) {
-        $seasonId = intval($_GET['seasonid']);
-        $episode = intval($_GET['episode']);
-
-        $stmt = $pdo->prepare("SELECT * FROM Episodes WHERE my_season_id = ? AND epSort = ?");
-        $stmt->execute([$seasonId, $episode]);
-        $res = $stmt->fetchAll();
-    }
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute([$episode_id, $season_id, $anime_id]);
+    $res = $stmt->fetch();
 
     // --- If episode found, process image ---
     if (!empty($res)) {
-        $res[0]['img'] = makeImgUrl("tmdb", $res[0]['img'], "mid");
+        $res['img'] = makeImgUrl("tmdb", $res['img'], "mid");
     } else {
         echo json_encode(['error' => 'Episode not found']);
         exit;
@@ -95,7 +41,7 @@ try {
 
     // --- Handle links if requested ---
     if (isset($_GET['links']) && $_GET['links'] === "true") {
-        $episodeId = $res[0]['episode_id'];
+        $episodeId = $res['episode_id'];
 
         if (isset($_GET['limit']) && $_GET['limit'] == 1) {
             $links = [];
