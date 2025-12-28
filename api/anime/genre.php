@@ -8,20 +8,27 @@ header("Content-type: application/json");
 
 if(isset($_GET['genre'])) {
     
-    $limit = (isset($_GET['limit']) ? $_GET['limit'] : 12);
-    $offset = (isset($_GET['offset']) ? $_GET['offset'] : 0);
+    $limit = (isset($_GET['limit']) ? (int)$_GET['limit'] : 12);
+    $offset = (isset($_GET['offset']) ? (int)$_GET['offset'] : 0);
 
     $genre = $_GET['genre'];
     
-    $res = $pdo->query("SELECT deadstream.* FROM deadstream JOIN anime_genres ON anime_genres.anime_id = deadstream.anime_id
-                        JOIN genres ON genres.id = anime_genres.genre_id WHERE genres.slug = '$genre' LIMIT $limit OFFSET $offset")->fetchAll();
-                        
+    $stmt = $pdo->prepare("SELECT deadstream.* FROM deadstream JOIN anime_genres ON anime_genres.anime_id = deadstream.anime_id
+                        JOIN genres ON genres.id = anime_genres.genre_id WHERE genres.slug = :genre LIMIT :limit OFFSET :offset");
+    $stmt->bindParam(':genre', $genre, PDO::PARAM_STR);
+    $stmt->bindParam(':limit', $limit, PDO::PARAM_INT);
+    $stmt->bindParam(':offset', $offset, PDO::PARAM_INT);
+    $stmt->execute();
+    $res = $stmt->fetchAll();
 
 
     if(isset($_GET['count']) && $_GET['count'] == "true") {
         
-        $count = $pdo->query("SELECT COUNT(*) AS total FROM deadstream JOIN anime_genres ON anime_genres.anime_id = deadstream.anime_id
-                        JOIN genres ON genres.id = anime_genres.genre_id WHERE genres.slug = '$genre'")->fetchAll();
+        $stmt = $pdo->prepare("SELECT COUNT(*) AS total FROM deadstream JOIN anime_genres ON anime_genres.anime_id = deadstream.anime_id
+                        JOIN genres ON genres.id = anime_genres.genre_id WHERE genres.slug = :genre");
+        $stmt->bindParam(':genre', $genre, PDO::PARAM_STR);
+        $stmt->execute();
+        $count = $stmt->fetchAll();
         
         $animes = $res;
         $res = [];
@@ -34,10 +41,15 @@ if(isset($_GET['genre'])) {
 
 else if(isset($_GET['anime'])) {
     $anime_id = $_GET['anime'];
-    $res = $pdo->query("SELECT genres.* FROM genres JOIN anime_genres ON anime_genres.anime_id = $anime_id AND anime_genres.genre_id = genres.id")->fetchAll();
+    $stmt = $pdo->prepare("SELECT genres.* FROM genres JOIN anime_genres ON anime_genres.anime_id = :anime_id AND anime_genres.genre_id = genres.id");
+    $stmt->bindParam(':anime_id', $anime_id, PDO::PARAM_INT);
+    $stmt->execute();
+    $res = $stmt->fetchAll();
 } else {
     
-    $res = $pdo->query("SELECT g.* FROM genres g JOIN anime_genres ag ON ag.genre_id = g.id")->fetchAll();
+    $stmt = $pdo->prepare("SELECT DISTINCT g.* FROM genres g JOIN anime_genres ag ON ag.genre_id = g.id");
+    $stmt->execute();
+    $res = $stmt->fetchAll();
     
 }
 
