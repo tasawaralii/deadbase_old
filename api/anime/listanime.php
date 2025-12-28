@@ -6,36 +6,29 @@ require("../../db.php");
 header("Content-type: application/json");
 
 
-$where = false;
-
-$completed = "";
-$type = "";
 $sort = "last_modified";
-
 $limit = (isset($_GET['limit']) ? $_GET['limit'] : 12);
 $offset = (isset($_GET['offset']) ? $_GET['offset'] : 0);
 
+$conditions = [];
+
 if(isset($_GET['completed'])) {
-    
-    if($_GET['completed'] == "true")
-        $completed = "WHERE completed = 1";
-    else
-        $completed = "WHERE completed = 0";
-    
-    $where = true;
+    $conditions[] = ($_GET['completed'] == "true") ? "completed = 1" : "completed = 0";
 }
 
 if(isset($_GET['type'])) {
-    if(!$where) {
-        $type = "WHERE type = '". $_GET['type'] ."'";
-        $where = true;
-    } else {
-        $type = "AND type = '". $_GET['type'] ."'";
-    }
+    $conditions[] = "type = '". $_GET['type'] ."'";
+}
+
+if(isset($_GET['alpha'])) {
+    $alpha = $_GET['alpha'];
+    if($alpha == "0-9")
+        $conditions[] = "anime_name NOT regexp '^[a-zA-Z]+'";
+    else
+        $conditions[] = "anime_name LIKE '$alpha%'";
 }
 
 if(isset($_GET['sort'])) {
-    
     if($_GET['sort'] == "new")
         $sort = "links_update";
     elseif($_GET['sort'] == "today")
@@ -48,40 +41,15 @@ if(isset($_GET['sort'])) {
         $sort = "total_views";
     elseif($_GET['sort'] == "random")
         $sort = "RAND()";
-    
-    
-    
 }
 
-$count_where = "";
+$whereClause = (count($conditions) > 0) ? "WHERE " . implode(" AND ", $conditions) : "";
+$orderBy = ($sort === "RAND()") ? "ORDER BY RAND()" : "ORDER BY $sort DESC";
 
-if(isset($_GET['alpha'])) {
-    
-    $alpha = $_GET['alpha'];
-    
-    if($alpha == "0-9") {
-    
-    
-        $res = $pdo->query("SELECT * FROM deadstream WHERE anime_name NOT regexp '^[a-zA-Z]+' ORDER BY $sort DESC LIMIT $limit OFFSET $offset")->fetchAll();
-        
-        $count_where = "WHERE anime_name NOT regexp '^[a-zA-Z]+'";
-        
-    } else {
-        
-        $res = $pdo->query("SELECT * FROM deadstream WHERE anime_name LIKE '$alpha%' ORDER BY $sort DESC LIMIT $limit OFFSET $offset")->fetchAll();
-        
-        $count_where = "WHERE anime_name LIKE '$alpha%'";
-        
-    }
-    
-} else {
-    
-    $res = $pdo->query("SELECT * FROM deadstream $completed $type ORDER BY $sort DESC LIMIT $limit OFFSET $offset")->fetchAll();
-    
-}
+$res = $pdo->query("SELECT * FROM deadstream $whereClause $orderBy LIMIT $limit OFFSET $offset")->fetchAll();
 
 if(isset($_GET['count']) && $_GET['count'] == "true") {
-    $count = $pdo->query("SELECT COUNT(*) AS total FROM deadstream $count_where")->fetchAll();
+    $count = $pdo->query("SELECT COUNT(*) AS total FROM deadstream $whereClause")->fetchAll();
     
     $animes = $res;
     $res = [];
