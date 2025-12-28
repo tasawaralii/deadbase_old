@@ -37,7 +37,7 @@ else if(isset($_GET['anime'])) {
     $res = $pdo->query("SELECT genres.* FROM genres JOIN anime_genres ON anime_genres.anime_id = $anime_id AND anime_genres.genre_id = genres.id")->fetchAll();
 } else {
     
-    $res = $pdo->query("SELECT * FROM genres")->fetchAll();
+    $res = $pdo->query("SELECT g.* FROM genres g JOIN anime_genres ag ON ag.genre_id = g.id")->fetchAll();
     
 }
 
